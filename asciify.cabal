@@ -30,6 +30,7 @@ executable asciify
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:    base >=4.16,
+                      vector ^>=0.13.1,
                       JuicyPixels ^>=3.3.8
     hs-source-dirs:   app
     default-language: Haskell2010
