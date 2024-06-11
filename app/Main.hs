@@ -54,17 +54,17 @@ pixelsIn (x, y) (x', y') img = concatMap (\ yi -> map (\ x -> pixelAt img x yi) 
 pooling :: (Int, Int) -> Image Pixel8 -> Image Pixel8
 pooling (xdim, ydim) img = generateImage pool w h
   where
-    w = quot (imageWidth img) xdim - 1
-    h = quot (imageHeight img) ydim - 1
-    pool x y = minimum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
+    w = quot (imageWidth img) xdim
+    h = quot (imageHeight img) ydim
+    pool x y = maximum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
 
 convolution :: [[Int]] -> Image Pixel8 -> Image Pixel8
 convolution matrix img = pixelMapXY convolute img
   where
-    xdim = length matrix
-    ydim = length (head matrix)
-    paddedImg = padImg (quot xdim 2, quot ydim 2) img
-    pixels x y = pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) paddedImg
+    xpad = quot (length matrix) 2
+    ypad = quot (length (head matrix)) 2
+    paddedImg = padImg (xpad, ypad) img
+    pixels x y = pixelsIn (x, y) (x+xpad*2, y+ypad*2) paddedImg
 
     convolute x y px = fromIntegral $ sum $ zipWith (\ x y -> x * fromIntegral y) (concat matrix) (pixels x y)
 
@@ -82,9 +82,9 @@ asciify img@(Image{imageWidth = w, imageHeight = h}) =
     -- widen = concatMap (replicate 2)
     charAt x y = charFor $ pixelAt img x y
 
-edgeConv = [[ 0, -1,  0],
-            [-1,  4, -1],
-            [ 0, -1,  0]]
+edgeConv = [[ 0,  1,  0],
+            [ 1, -4,  1],
+            [ 0,  1,  0]]
 
 main :: IO ()
 main = do
@@ -98,6 +98,7 @@ main = do
         Right img -> do
           let greyscale = convertP8 img
           -- savePngImage (filename ++ "_greyscale.png") (ImageY8 greyscale)
-          let processed = (pooling (4, 4) . convolution edgeConv . pooling (2, 2)) greyscale
-          saveJpgImage 80 (filename ++ "_transformed.jpg") (ImageY8 processed)
-          mapM_ putStrLn (asciify processed)
+          let processed = (convolution edgeConv . convolution edgeConv) greyscale
+
+          saveJpgImage 80 (filename ++ "_processed.jpg") (ImageY8 processed)
+          -- mapM_ putStrLn (asciify processed)
