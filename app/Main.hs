@@ -36,15 +36,37 @@ instance ColorSpaceConvertible PixelRGB8 Pixel8 where
 convertP8 :: DynamicImage -> Image Pixel8
 convertP8 = convertImage . convertRGB8
 
+padImg :: (Int, Int) -> Image Pixel8 -> Image Pixel8
+padImg (xpad, ypad) img@(Image{imageWidth = ow, imageHeight = oh}) =
+  generateImage pixel (ow + xpad * 2) (oh + ypad * 2)
+  where
+    yfrom y | y < ypad  = 0
+            | y >= oh   = oh - 1
+            | otherwise = y
+    xfrom x | x < xpad  = 0
+            | x >= ow   = ow - 1
+            | otherwise = x
+    pixel x y = pixelAt img (xfrom x) (yfrom y)
+
 pixelsIn :: (Int, Int) -> (Int, Int) -> Image Pixel8 -> [Pixel8]
 pixelsIn (x, y) (x', y') img = concatMap (\ yi -> map (\ x -> pixelAt img x yi) [x..x']) [y..y']
 
-convolution :: (Int, Int) -> Image Pixel8 -> Image Pixel8
-convolution (xdim, ydim) img = generateImage convolute w h
+pooling :: (Int, Int) -> Image Pixel8 -> Image Pixel8
+pooling (xdim, ydim) img = generateImage pool w h
   where
     w = quot (imageWidth img) xdim - 1
     h = quot (imageHeight img) ydim - 1
-    convolute x y = minimum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
+    pool x y = minimum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
+
+convolution :: [[Int]] -> Image Pixel8 -> Image Pixel8
+convolution matrix img = pixelMapXY convolute img
+  where
+    xdim = length matrix
+    ydim = length (head matrix)
+    paddedImg = padImg (quot xdim 2, quot ydim 2) img
+    pixels x y = pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) paddedImg
+
+    convolute x y px = fromIntegral $ sum $ zipWith (\ x y -> x * fromIntegral y) (concat matrix) (pixels x y)
 
 charFor :: Pixel8 -> Char
 charFor px | px < 51   = '#'
@@ -60,6 +82,10 @@ asciify img@(Image{imageWidth = w, imageHeight = h}) =
     -- widen = concatMap (replicate 2)
     charAt x y = charFor $ pixelAt img x y
 
+edgeConv = [[ 0, -1,  0],
+            [-1,  4, -1],
+            [ 0, -1,  0]]
+
 main :: IO ()
 main = do
   commandArguments <- getArgs
@@ -72,6 +98,6 @@ main = do
         Right img -> do
           let greyscale = convertP8 img
           -- savePngImage (filename ++ "_greyscale.png") (ImageY8 greyscale)
-          let convoluted = (convolution (4, 4) . convolution(2, 4) . convolution(2, 2)) greyscale
-          saveJpgImage 80 (filename ++ "_transformed.jpg") (ImageY8 convoluted)
-          mapM_ putStrLn (asciify convoluted)
+          let processed = (pooling (4, 4) . convolution edgeConv . pooling (2, 2)) greyscale
+          saveJpgImage 80 (filename ++ "_transformed.jpg") (ImageY8 processed)
+          mapM_ putStrLn (asciify processed)
