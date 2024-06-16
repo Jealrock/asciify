@@ -68,6 +68,21 @@ convolution matrix img = pixelMapXY convolute img
 
     convolute x y px = fromIntegral $ sum $ zipWith (\ x y -> x * fromIntegral y) (concat matrix) (pixels x y)
 
+-- exposure :: Image Pixel8 -> Image Pixel8
+-- exposure = pixelMap (\ px -> fromIntegral $ min 255 (max 0 (px + 50)))
+
+exposure :: (Float, Float) -> Image Pixel8 -> Image Pixel8
+exposure (black_level, exposure) = pixelMap expose
+  where
+    white = 2 ** (-exposure)
+    diff = max (white - black_level) 0.000001
+    gain = 1.0 / diff;
+
+    float px = fromIntegral px / 255.0
+    word8 px = min 0 (max (floor px) 255)
+    expose px = word8 ((float px - black_level) * gain)
+
+
 charFor :: Pixel8 -> Char
 charFor px | px < 51   = '#'
            | px < 102  = '*'
@@ -98,7 +113,7 @@ main = do
         Right img -> do
           let greyscale = convertP8 img
           -- savePngImage (filename ++ "_greyscale.png") (ImageY8 greyscale)
-          let processed = (convolution edgeConv . convolution edgeConv) greyscale
+          let processed = exposure (0.1, 0.0) greyscale
 
           saveJpgImage 80 (filename ++ "_processed.jpg") (ImageY8 processed)
           -- mapM_ putStrLn (asciify processed)
