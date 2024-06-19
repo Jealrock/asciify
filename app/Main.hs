@@ -42,7 +42,7 @@ convertRGBF = promoteImage . convertRGB8
 convertF :: DynamicImage -> Image PixelF
 convertF = extractLumaPlane . convertRGBF
 
-padImg :: (Int, Int) -> Image Pixel8 -> Image Pixel8
+padImg :: (Int, Int) -> Image PixelF -> Image PixelF
 padImg (xpad, ypad) img@(Image{imageWidth = ow, imageHeight = oh}) =
   generateImage pixel (ow + xpad * 2) (oh + ypad * 2)
   where
@@ -54,17 +54,17 @@ padImg (xpad, ypad) img@(Image{imageWidth = ow, imageHeight = oh}) =
             | otherwise = x
     pixel x y = pixelAt img (xfrom x) (yfrom y)
 
-pixelsIn :: (Int, Int) -> (Int, Int) -> Image Pixel8 -> [Pixel8]
+pixelsIn :: (Int, Int) -> (Int, Int) -> Image PixelF -> [PixelF]
 pixelsIn (x, y) (x', y') img = concatMap (\ yi -> map (\ x -> pixelAt img x yi) [x..x']) [y..y']
 
-pooling :: (Int, Int) -> Image Pixel8 -> Image Pixel8
+pooling :: (Int, Int) -> Image PixelF -> Image PixelF
 pooling (xdim, ydim) img = generateImage pool w h
   where
     w = quot (imageWidth img) xdim
     h = quot (imageHeight img) ydim
-    pool x y = maximum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
+    pool x y = minimum (pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img)
 
-convolution :: [[Int]] -> Image Pixel8 -> Image Pixel8
+convolution :: [[Float]] -> Image PixelF -> Image PixelF
 convolution matrix img = pixelMapXY convolute img
   where
     xpad = quot (length matrix) 2
@@ -72,10 +72,7 @@ convolution matrix img = pixelMapXY convolute img
     paddedImg = padImg (xpad, ypad) img
     pixels x y = pixelsIn (x, y) (x+xpad*2, y+ypad*2) paddedImg
 
-    convolute x y px = fromIntegral $ sum $ zipWith (\ x y -> x * fromIntegral y) (concat matrix) (pixels x y)
-
--- exposure :: Image Pixel8 -> Image Pixel8
--- exposure = pixelMap (\ px -> fromIntegral $ min 255 (max 0 (px + 50)))
+    convolute x y px = sum $ zipWith (*) (concat matrix) (pixels x y)
 
 exposure :: (Float, Float) -> Image PixelF -> Image PixelF
 exposure (black_level, exposure) = pixelMap expose
@@ -84,26 +81,34 @@ exposure (black_level, exposure) = pixelMap expose
     diff = max (white - black_level) 0.000001
     gain = 1.0 / diff;
 
-    expose px = (px - black_level) * gain
+    expose px = min ((px - black_level) * gain) 1.0
 
+data BW = B | W -- Black/White
 
-charFor :: Pixel8 -> Char
-charFor px | px < 51   = '#'
-           | px < 102  = '*'
-           | px < 153  = ':'
-           | px < 204  = '.'
-           | otherwise = ' '
-
-asciify :: Image Pixel8 -> [String]
-asciify img@(Image{imageWidth = w, imageHeight = h}) =
-  map (\ y -> map (`charAt` y) [0..w-1]) [0..h-1]
+preAsciify :: Image PixelF -> [[[BW]]]
+preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
   where
-    -- widen = concatMap (replicate 2)
-    charAt x y = charFor $ pixelAt img x y
+    xdim = 3
+    ydim = 3
+    w = quot (imageWidth img) xdim
+    h = quot (imageHeight img) ydim
 
-edgeConv = [[ 0,  1,  0],
-            [ 1, -4,  1],
-            [ 0,  1,  0]]
+    bwify x y = map (\x -> if x > 0.5 then W else B) $
+                pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img
+
+
+asciify :: Image PixelF -> [String]
+asciify img = map (map charAt) (preAsciify img)
+  where
+    charAt :: [BW] -> Char
+    charAt [W, W, W,
+            W, W, W,
+            W, W, W] = ' '
+    charAt x = '#'
+
+edgeConv = [[  0.0, -1.0,  0.0],
+            [ -1.0,  4.0, -1.0],
+            [  0.0, -1.0,  0.0]]
 
 main :: IO ()
 main = do
@@ -115,10 +120,8 @@ main = do
       case dynImg of
         Left err -> putStrLn err
         Right img -> do
-          -- let greyscale = convertP8 img
           let greyscale = convertF img
-          -- savePngImage (filename ++ "_greyscale.png") (ImageY8 greyscale)
-          let processed = exposure (0.1, 10.0) greyscale
+          let processed = (pooling (4, 4) . exposure (0.1, 10.0)) greyscale
 
           saveJpgImage 80 (filename ++ "_processed.jpg") (ImageYF processed)
-          -- mapM_ putStrLn (asciify processed)
+          mapM_ putStrLn (asciify processed)
