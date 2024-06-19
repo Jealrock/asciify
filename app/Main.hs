@@ -36,6 +36,12 @@ instance ColorSpaceConvertible PixelRGB8 Pixel8 where
 convertP8 :: DynamicImage -> Image Pixel8
 convertP8 = convertImage . convertRGB8
 
+convertRGBF :: DynamicImage -> Image PixelRGBF
+convertRGBF = promoteImage . convertRGB8
+
+convertF :: DynamicImage -> Image PixelF
+convertF = extractLumaPlane . convertRGBF
+
 padImg :: (Int, Int) -> Image Pixel8 -> Image Pixel8
 padImg (xpad, ypad) img@(Image{imageWidth = ow, imageHeight = oh}) =
   generateImage pixel (ow + xpad * 2) (oh + ypad * 2)
@@ -71,16 +77,14 @@ convolution matrix img = pixelMapXY convolute img
 -- exposure :: Image Pixel8 -> Image Pixel8
 -- exposure = pixelMap (\ px -> fromIntegral $ min 255 (max 0 (px + 50)))
 
-exposure :: (Float, Float) -> Image Pixel8 -> Image Pixel8
+exposure :: (Float, Float) -> Image PixelF -> Image PixelF
 exposure (black_level, exposure) = pixelMap expose
   where
     white = 2 ** (-exposure)
     diff = max (white - black_level) 0.000001
     gain = 1.0 / diff;
 
-    float px = fromIntegral px / 255.0
-    word8 px = min 0 (max (floor px) 255)
-    expose px = word8 ((float px - black_level) * gain)
+    expose px = (px - black_level) * gain
 
 
 charFor :: Pixel8 -> Char
@@ -111,9 +115,10 @@ main = do
       case dynImg of
         Left err -> putStrLn err
         Right img -> do
-          let greyscale = convertP8 img
+          -- let greyscale = convertP8 img
+          let greyscale = convertF img
           -- savePngImage (filename ++ "_greyscale.png") (ImageY8 greyscale)
-          let processed = exposure (0.1, 0.0) greyscale
+          let processed = exposure (0.1, 10.0) greyscale
 
-          saveJpgImage 80 (filename ++ "_processed.jpg") (ImageY8 processed)
+          saveJpgImage 80 (filename ++ "_processed.jpg") (ImageYF processed)
           -- mapM_ putStrLn (asciify processed)
