@@ -83,7 +83,7 @@ exposure (black_level, exposure) = pixelMap expose
 
     expose px = min ((px - black_level) * gain) 1.0
 
-data BW = B | W -- Black/White
+data BW = B | W deriving (Show, Eq) -- Black/White
 
 preAsciify :: Image PixelF -> [[[BW]]]
 preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
@@ -101,14 +101,24 @@ asciify :: Image PixelF -> [String]
 asciify img = map (map charAt) (preAsciify img)
   where
     charAt :: [BW] -> Char
-    charAt [W, W, W,
-            W, W, W,
-            W, W, W] = ' '
-    charAt x = '#'
+    charAt x | length (filter (== B) x) == 1 = '.'
+             | length (filter (== B) x) == 2 = ':'
+             | length (filter (== B) x) == 3 = 'o'
+             | length (filter (== B) x) == 4 = 'O'
+             | length (filter (== B) x) == 5 = '8'
+             | length (filter (== B) x) == 6 = 'M'
+             | length (filter (== B) x) == 7 = 'W'
+             | length (filter (== B) x) == 8 = 'M'
+             | length (filter (== B) x) == 8 = 'M'
+             | otherwise = ' '
 
 edgeConv = [[  0.0, -1.0,  0.0],
             [ -1.0,  4.0, -1.0],
             [  0.0, -1.0,  0.0]]
+
+asciifySize = 3
+desiredSize = 40
+maxPoolSize = 4
 
 main :: IO ()
 main = do
@@ -121,7 +131,19 @@ main = do
         Left err -> putStrLn err
         Right img -> do
           let greyscale = convertF img
-          let processed = (pooling (4, 4) . exposure (0.1, 10.0)) greyscale
+          let w = imageWidth greyscale
+          -- I want 60x20
+          -- How much pools should be done?
+          let poolBy = quot w (desiredSize * asciifySize)
+          let pools = quot poolBy maxPoolSize
+          let lastPoolSize = maxPoolSize - rem poolBy maxPoolSize
+
+          let processList =
+                [pooling (lastPoolSize, lastPoolSize)]
+                ++ replicate pools (pooling (maxPoolSize, maxPoolSize))
+                ++ [exposure (0.1, 10.0)]
+
+          let processed = foldr (\f acc -> f acc) greyscale processList
 
           saveJpgImage 80 (filename ++ "_processed.jpg") (ImageYF processed)
           mapM_ putStrLn (asciify processed)
