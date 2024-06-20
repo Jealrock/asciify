@@ -1,0 +1,8 @@
+Full ASCII alphabet:
+
+! "#$%&'()*+,-./\|0123456789:;<=>?`@[]{}^~_
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+What we want for lines:
+
+-/\|_~
