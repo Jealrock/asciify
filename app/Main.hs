@@ -67,20 +67,48 @@ preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
                 pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img
 
 
+oneOrNone :: (a -> Bool) -> [a] -> Bool
+oneOrNone f x = length (filter f x) <= 1
+
+charAt :: [BW] -> String
+-- diagonals
+charAt x@[B, x12, x13,
+          x21, B, x23,
+          x31, x32, B]
+  | oneOrNone (== B) rut && oneOrNone (== B) lbt = " \\"
+  where rut = [x12, x13, x23] -- right upper triangle
+        lbt = [x21, x31, x32] -- left bottom triangle
+charAt   [B, B, W,
+          B, B, B,
+          W, B, B] = "\\\\"
+charAt   [B, B, W,
+          W, B, B,
+          W, W, B] = " \\"
+charAt   [B, W, W,
+          B, B, W,
+          W, B, B] = "\\ "
+charAt x@[x11, x12, B,
+          x21, B, x23,
+          B, x32, x33]
+  | oneOrNone (== B) lut && oneOrNone (== B) rbt = " /"
+  where lut = [x11, x12, x21] -- left upper triangle
+        rbt = [x23, x32, x33] -- right bottom triangle
+charAt   [W, W, B,
+          W, B, B,
+          B, B, W] = " /"
+charAt   [W, B, B,
+          B, B, W,
+          B, W, W] = "/ "
+charAt   [W, B, B,
+          B, B, B,
+          B, B, W] = "//"
+-- hlines
+
+-- vlines
+charAt x = "  "
+
 asciify :: Image PixelF -> [String]
 asciify img = map (concatMap charAt) (preAsciify img)
-  where
-    charAt :: [BW] -> String
-    charAt x | length (filter (== B) x) == 1 = ".  "
-             | length (filter (== B) x) == 2 = ":  "
-             | length (filter (== B) x) == 3 = "o  "
-             | length (filter (== B) x) == 4 = "O  "
-             | length (filter (== B) x) == 5 = "8  "
-             | length (filter (== B) x) == 6 = "M  "
-             | length (filter (== B) x) == 7 = "W  "
-             | length (filter (== B) x) == 8 = "M  "
-             | length (filter (== B) x) == 8 = "M  "
-             | otherwise = "   "
 
 edgeConv = [[  0.0, -1.0,  0.0],
             [ -1.0,  4.0, -1.0],
