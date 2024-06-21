@@ -103,8 +103,65 @@ charAt   [W, B, B,
           B, B, B,
           B, B, W] = "//"
 -- hlines
+charAt   [  B,   B,   B,
+          x21, x22, x23,
+          x31, x32, x33]
+  | oneOrNone (== B) l2 && oneOrNone (== B) l3 = "--"
+  where l2 = [x21, x22, x23]
+        l3 = [x31, x32, x33]
+charAt   [x11, x12, x13,
+            B,   B,   B,
+          x31, x32, x33]
+  | oneOrNone (== B) l1 && oneOrNone (== B) l3 = "--"
+  where l1 = [x11, x12, x13]
+        l3 = [x31, x32, x33]
+charAt   [x11, x12, x13,
+          x21, x22, x23,
+            B,   B,   B]
+  | oneOrNone (== B) l1 && oneOrNone (== B) l2 = "__"
+  where l1 = [x11, x12, x13]
+        l2 = [x21, x22, x23]
+charAt   [x11, x12, x13,
+            B,   B,   B,
+            B,   B,   B]
+  | oneOrNone (== B) l1 = "~~"
+  where l1 = [x11, x12, x13]
+charAt   [  B,   B,   B,
+            B,   B,   B,
+          x31, x32, x33]
+  | oneOrNone (== B) l3 = "~~"
+  where l3 = [x31, x32, x33]
 
 -- vlines
+charAt   [B, x12, x13,
+          B, x22, x23,
+          B, x32, x33]
+  | oneOrNone (== B) c2 && oneOrNone (== B) c3 = "| "
+  where c2 = [x12, x22, x32]
+        c3 = [x13, x23, x33]
+charAt   [x11, B, x13,
+          x21, B, x23,
+          x31, B, x33]
+  | oneOrNone (== B) c1 && oneOrNone (== B) c3 = "| "
+  where c1 = [x11, x21, x31]
+        c3 = [x13, x23, x33]
+charAt   [x11, x12, B,
+          x21, x22, B,
+          x31, x32, B]
+  | oneOrNone (== B) c1 && oneOrNone (== B) c2 = " |"
+  where c1 = [x11, x21, x31]
+        c2 = [x12, x22, x32]
+charAt   [B, B, x13,
+          B, B, x23,
+          B, B, x33]
+  | oneOrNone (== B) c3 = "||"
+  where c3 = [x13, x23, x33]
+charAt   [x11, B, B,
+          x21, B, B,
+          x31, B, B]
+  | oneOrNone (== B) c1 = "||"
+  where c1 = [x11, x21, x31]
+
 charAt x = "  "
 
 asciify :: Image PixelF -> [String]
@@ -115,7 +172,7 @@ edgeConv = [[  0.0, -1.0,  0.0],
             [  0.0, -1.0,  0.0]]
 
 asciifySize = 3
-desiredSize = 40
+desiredSize = 20
 maxPoolSize = 4
 
 main :: IO ()
@@ -138,7 +195,7 @@ main = do
 
           let processList =
                 [pooling (lastPoolSize, lastPoolSize)]
-                ++ replicate pools (pooling (maxPoolSize, maxPoolSize))
+                ++ replicate (pools - 1) (pooling (maxPoolSize, maxPoolSize))
                 ++ [exposure (0.1, 10.0)]
 
           let processed = foldr (\f acc -> f acc) greyscale processList
