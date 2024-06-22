@@ -51,7 +51,7 @@ exposure (black_level, exposure) = pixelMap expose
     diff = max (white - black_level) 0.000001
     gain = 1.0 / diff;
 
-    expose px = min ((px - black_level) * gain) 1.0
+    expose px = (px - black_level) * gain
 
 data BW = B | W deriving (Show, Eq) -- Black/White
 
@@ -63,9 +63,8 @@ preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
     w = quot (imageWidth img) xdim
     h = quot (imageHeight img) ydim
 
-    bwify x y = map (\x -> if x > 0.5 then W else B) $
+    bwify x y = map (\x -> if x > 0.0 then W else B) $
                 pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img
-
 
 oneOrNone :: (a -> Bool) -> [a] -> Bool
 oneOrNone f x = length (filter f x) <= 1
@@ -175,6 +174,24 @@ asciifySize = 3
 desiredSize = 20
 maxPoolSize = 4
 
+-- debugging
+fToRGBF :: Image PixelF -> Image PixelRGBF
+fToRGBF = promoteImage
+
+boxify :: Int -> Image PixelRGBF -> Image PixelRGBF
+boxify bsize img@(Image{imageWidth = ow, imageHeight = oh}) = generateImage pixel w h
+  where
+    boxes = quot ow bsize
+    w = ow + boxes + 1
+    h = oh + boxes + 1
+    emptyPixel = PixelRGBF 0.5 0.5 0.5
+
+    pixel x y | x == 0 || y == 0 = emptyPixel
+              | x `mod` (bsize + 1) == 0 || y `mod` (bsize + 1) == 0 = emptyPixel
+              | otherwise = pixelAt img (x - (x `div` (bsize + 1) + 1))
+                                        (y - (y `div` (bsize + 1) + 1))
+
+
 main :: IO ()
 main = do
   commandArguments <- getArgs
@@ -200,5 +217,12 @@ main = do
 
           let processed = foldr (\f acc -> f acc) greyscale processList
 
-          saveJpgImage 80 (filename ++ "_processed.jpg") (ImageYF processed)
+          saveBmpImage (filename ++ "_processed.bmp") (ImageYF processed)
+          -- debugging
+
+          let withBoxes = boxify 3 (fToRGBF processed)
+          saveBmpImage (filename ++ "_with_3boxes.bmp") (ImageRGBF withBoxes)
+          let withBoxes = boxify 5 (fToRGBF processed)
+          saveBmpImage (filename ++ "_with_5boxes.bmp") (ImageRGBF withBoxes)
+
           mapM_ putStrLn (asciify processed)
