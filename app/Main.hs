@@ -44,9 +44,11 @@ main = do
           saveBmpImage (filename ++ "_processed.bmp") (ImageYF processed)
           -- debugging
 
-          let withBoxes = boxify 3 (fToRGBF processed)
+          let withBoxes = boxify (2, 4) (fToRGBF processed)
+          saveBmpImage (filename ++ "_with_2boxes.bmp") (ImageRGBF withBoxes)
+          let withBoxes = boxify (3, 3) (fToRGBF processed)
           saveBmpImage (filename ++ "_with_3boxes.bmp") (ImageRGBF withBoxes)
-          let withBoxes = boxify 5 (fToRGBF processed)
+          let withBoxes = boxify (5, 5) (fToRGBF processed)
           saveBmpImage (filename ++ "_with_5boxes.bmp") (ImageRGBF withBoxes)
 
           mapM_ putStrLn (asciify processed)

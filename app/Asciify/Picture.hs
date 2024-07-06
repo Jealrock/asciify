@@ -57,15 +57,16 @@ pixelsIn (x, y) (x', y') img = concatMap (\ yi -> map (\ x -> pixelAt img x yi) 
 fToRGBF :: Image PixelF -> Image PixelRGBF
 fToRGBF = promoteImage
 
-boxify :: Int -> Image PixelRGBF -> Image PixelRGBF
-boxify bsize img@(Image{imageWidth = ow, imageHeight = oh}) = generateImage pixel w h
+boxify :: (Int, Int) -> Image PixelRGBF -> Image PixelRGBF
+boxify (bw, bh) img@(Image{imageWidth = ow, imageHeight = oh}) = generateImage pixel w h
   where
-    boxes = quot ow bsize
-    w = ow + boxes + 1
-    h = oh + boxes + 1
+    boxesw = quot ow bw
+    boxesh = quot oh bh
+    w = ow + boxesw + 1
+    h = oh + boxesh + 1
     emptyPixel = PixelRGBF 0.5 0.5 0.5
 
     pixel x y | x == 0 || y == 0 = emptyPixel
-              | x `mod` (bsize + 1) == 0 || y `mod` (bsize + 1) == 0 = emptyPixel
-              | otherwise = pixelAt img (x - (x `div` (bsize + 1) + 1))
-                                        (y - (y `div` (bsize + 1) + 1))
+              | x `mod` (bw + 1) == 0 || y `mod` (bh + 1) == 0 = emptyPixel
+              | otherwise = pixelAt img (x - (x `div` (bw + 1) + 1))
+                                        (y - (y `div` (bh + 1) + 1))
