@@ -192,6 +192,13 @@ boxify bsize img@(Image{imageWidth = ow, imageHeight = oh}) = generateImage pixe
               | otherwise = pixelAt img (x - (x `div` (bsize + 1) + 1))
                                         (y - (y `div` (bsize + 1) + 1))
 
+pools :: Int -> Int -> [(Int, Int)]
+pools maxPoolSize poolBy = case quotRem poolBy maxPoolSize of
+  (q, r) | q == 0 && r == 0 -> []
+         | q == 0 -> [(r,r)]
+         | q < maxPoolSize -> [(maxPoolSize, maxPoolSize), (q + 1, q + 1)]
+         | otherwise -> (maxPoolSize, maxPoolSize) : pools maxPoolSize q
+-- maybe use remainder to partially pool the image later
 
 main :: IO ()
 main = do
@@ -204,17 +211,11 @@ main = do
         Left err -> putStrLn err
         Right img -> do
           let greyscale = convertF img
-          let w = imageWidth greyscale
-          -- I want 60x20
-          -- How much pools should be done?
+          let w = imageWidth greyscale -- TODO: should be biggest size
           let poolBy = quot w (desiredSize * asciifySize)
-          let pools = quot poolBy maxPoolSize
-          let lastPoolSize = maxPoolSize - rem poolBy maxPoolSize
 
-          let processList =
-                [pooling (lastPoolSize, lastPoolSize)]
-                ++ replicate pools (pooling (maxPoolSize, maxPoolSize))
-                ++ [exposure (0.1, 10.0)]
+          let processList = map pooling (pools maxPoolSize poolBy) ++
+                            [exposure (0.1, 10.0)]
 
           let processed = foldr (\f acc -> f acc) greyscale processList
 
