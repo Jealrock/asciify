@@ -3,6 +3,7 @@
 
 module Main where
 import System.Environment( getArgs )
+import Control.Monad (when)
 import Codec.Picture
 import Codec.Picture.Types
 
@@ -212,10 +213,16 @@ main = do
 
           let processList =
                 [pooling (lastPoolSize, lastPoolSize)]
-                ++ replicate (pools - 1) (pooling (maxPoolSize, maxPoolSize))
+                ++ replicate pools (pooling (maxPoolSize, maxPoolSize))
                 ++ [exposure (0.1, 10.0)]
 
           let processed = foldr (\f acc -> f acc) greyscale processList
+
+          when (imageWidth processed >= desiredSize * asciifySize ||
+                imageHeight processed >= desiredSize * asciifySize) $ do
+            error ("Incorrect image size. " ++
+                   "Wanted: " ++ show (desiredSize * asciifySize, desiredSize * asciifySize) ++
+                   ", got: " ++ show (imageWidth processed, imageHeight processed))
 
           saveBmpImage (filename ++ "_processed.bmp") (ImageYF processed)
           -- debugging
