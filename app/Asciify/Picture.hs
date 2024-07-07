@@ -44,6 +44,12 @@ exposure (black_level, exposure) = pixelMap expose
 
     expose px = (px - black_level) * gain
 
+inverse :: Image PixelF -> Image PixelF
+inverse = pixelMap (1.0 -)
+
+threshold :: Float -> Image PixelF -> Image PixelF
+threshold x = pixelMap (\ p -> if p > x then 1.0 else 0.0)
+
 convertRGBF :: DynamicImage -> Image PixelRGBF
 convertRGBF = promoteImage . convertRGB8
 
