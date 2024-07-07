@@ -4,7 +4,7 @@ import Control.Monad (when)
 import Asciify.Picture
 import Asciify.Text
 
-asciifySize = 3
+asciifySize = 4
 desiredSize = 20
 maxPoolSize = 4
 
@@ -35,6 +35,8 @@ main = do
 
           let processed = foldr (\f acc -> f acc) greyscale processList
 
+
+          putStrLn ("Image size: " ++ show (imageWidth processed, imageHeight processed))
           when (imageWidth processed >= desiredSize * asciifySize ||
                 imageHeight processed >= desiredSize * asciifySize) $ do
             error ("Incorrect image size. " ++
@@ -46,9 +48,9 @@ main = do
 
           let withBoxes = boxify (2, 4) (fToRGBF processed)
           saveBmpImage (filename ++ "_with_2boxes.bmp") (ImageRGBF withBoxes)
-          let withBoxes = boxify (3, 3) (fToRGBF processed)
-          saveBmpImage (filename ++ "_with_3boxes.bmp") (ImageRGBF withBoxes)
-          let withBoxes = boxify (5, 5) (fToRGBF processed)
-          saveBmpImage (filename ++ "_with_5boxes.bmp") (ImageRGBF withBoxes)
+          -- let withBoxes = boxify (3, 3) (fToRGBF processed)
+          -- saveBmpImage (filename ++ "_with_3boxes.bmp") (ImageRGBF withBoxes)
+          -- let withBoxes = boxify (5, 5) (fToRGBF processed)
+          -- saveBmpImage (filename ++ "_with_5boxes.bmp") (ImageRGBF withBoxes)
 
           mapM_ putStrLn (asciify processed)
