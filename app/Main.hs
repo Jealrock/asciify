@@ -66,7 +66,7 @@ main = do
 
           -- debugging
           let withBoxes = boxify (2, 4) (fToRGBF processed)
-          saveBmpImage (filename ++ "_with_2boxes.bmp") (ImageRGBF withBoxes)
+          saveBmpImage (filename ++ "_boxed.bmp") (ImageRGBF withBoxes)
 
           mapM_ putStrLn (asciify processed)
     (_, _, errs) -> do

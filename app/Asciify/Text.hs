@@ -4,7 +4,6 @@ import Data.Maybe (fromMaybe)
 import Data.List (elemIndex)
 
 data BW = B | W deriving (Show, Eq) -- Black/White
-presedence = ['\\', '/', '_', '-', '|', '#', ' ']
 
 preAsciify :: Image PixelF -> [[[BW]]]
 preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
@@ -20,12 +19,33 @@ preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
 boxToChar :: [BW] -> Char
 boxToChar box = case (c1, c2) of
   ('-', '-') -> '_'
+  ('#', '#') -> '#'
+  ('#', _)   -> '-'
+  (_ , '#')  -> '_'
   _          -> if c1idx <= c2idx then c1 else c2
   where
     c1 = charAt' (take 4 box)
     c2 = charAt' (drop 4 box)
     c1idx = fromMaybe 99 (elemIndex c1 presedence)
     c2idx = fromMaybe 99 (elemIndex c2 presedence)
+
+presedence = ['\\', '/', '_', '-', '|', '#', ' ']
+
+boxToChar' :: [BW] -> Char
+boxToChar' box = case (c1, c2, c3) of
+  ('#', '#', '#') -> '#'
+  ('#', _, _)   -> '\''
+  (_, '#', _)   -> '-'
+  (_ , _, '#')  -> '_'
+  _          -> if min c1idx <= c2idx then c1 else c2
+  where
+    twoSame
+    c1 = charAt' (take 4 box)
+    c2 = charAt' ((drop 4 . take 6) box)
+    c3 = charAt' (drop 4 box)
+    clist = [c1 : c2 : c3]
+    idx = \ x -> fromMaybe 99 (elemIndex x presedence)
+    ci = zip (map idx clist) clist
 
 charAt' :: [BW] -> Char
 charAt' x@[W, W, W, W] = ' '
