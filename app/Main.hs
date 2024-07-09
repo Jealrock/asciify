@@ -14,7 +14,6 @@ pools :: Int -> Int -> [(Int, Int)]
 pools maxPoolSize poolBy = case quotRem poolBy maxPoolSize of
   (q, r) | q == 0 && r == 0 -> []
          | q == 0 -> [(r,r)]
-         | q < maxPoolSize && r == 0 -> [(maxPoolSize, maxPoolSize)]
          | q < maxPoolSize -> [(maxPoolSize, maxPoolSize), (q + 1, q + 1)]
          | otherwise -> (maxPoolSize, maxPoolSize) : pools maxPoolSize q
 -- maybe use remainder to partially pool the image later
@@ -52,7 +51,7 @@ main = do
 
           let processAndOutput (i, acc) f = do
                 let processed = f acc
-                saveBmpImage (filename ++ "_processed" ++ show i ++ ".bmp") (ImageYF processed)
+                -- saveBmpImage (filename ++ "_processed" ++ show i ++ ".bmp") (ImageYF processed)
                 return (i + 1, processed)
 
           (i, processed) <- foldM processAndOutput (0, greyscale) (reverse processList)
@@ -65,8 +64,8 @@ main = do
                    ", got: " ++ show (imageWidth processed, imageHeight processed))
 
           -- debugging
-          let withBoxes = boxify (2, 4) (fToRGBF processed)
-          saveBmpImage (filename ++ "_boxed.bmp") (ImageRGBF withBoxes)
+          -- let withBoxes = boxify (2, 4) (fToRGBF processed)
+          -- saveBmpImage (filename ++ "_boxed.bmp") (ImageRGBF withBoxes)
 
           mapM_ putStrLn (asciify processed)
     (_, _, errs) -> do
