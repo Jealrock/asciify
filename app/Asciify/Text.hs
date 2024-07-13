@@ -16,9 +16,9 @@ preAsciify img = map (\ y -> map (`bwify` y) [0..w-1]) [0..h-1]
     bwify x y = map (\x -> if x > 0.0 then W else B) $
                 pixelsIn (x*xdim, y*ydim) (x*xdim+xdim-1, y*ydim+ydim-1) img
 
+presedence = ['\\', '/', '|', '_', '-', '#', ' ']
 boxToChar :: [BW] -> Char
 boxToChar box = case (c1, c2) of
-  ('-', '-') -> '_'
   ('#', '#') -> '#'
   ('#', _)   -> '-'
   (_ , '#')  -> '_'
@@ -29,7 +29,28 @@ boxToChar box = case (c1, c2) of
     c1idx = fromMaybe 99 (elemIndex c1 presedence)
     c2idx = fromMaybe 99 (elemIndex c2 presedence)
 
-presedence = ['\\', '/', '_', '-', '|', '#', ' ']
+
+unclutter :: [String] -> [String]
+unclutter x = map unclutH $ transpose (map unclutV (transpose x))
+  where
+    transpose :: [String] -> [String]
+    transpose [] = []
+    transpose ([]:_) = []
+    transpose xs = map head xs : transpose (map tail xs)
+
+    unclutV [] = []
+    unclutV [x] = [x]
+    unclutV (x:y:xs)
+      | x == '_' && y == '-'   = '_' : ' ' : unclutV xs
+      | otherwise              = x : unclutV (y:xs)
+
+    unclutH [] = []
+    unclutH [x] = [x]
+    unclutH (x:y:xs)
+      | x == '|' && y == '|'   = '|' : ' ' : unclutH xs
+      | x == '\\' && y == '\\' = ' ' : '\\' : unclutH xs
+      | x == '/' && y == '/'   = '/' : ' ' : unclutH xs
+      | otherwise              = x : unclutH (y:xs)
 
 charAt :: [BW] -> Char
 charAt [W, W, W, W] = ' '
