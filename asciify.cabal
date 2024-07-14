@@ -3,7 +3,7 @@ name:               asciify
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:
+synopsis: Command line utility to help make ASCII art from your images
 
 -- A longer description of the package.
 -- description:
@@ -11,8 +11,7 @@ version:            0.1.0.0
 -- A URL where users can report bugs.
 -- bug-reports:
 
--- The license under which the package is released.
--- license:
+license:            DHARMA
 author:             Oleh Marakhovskyi
 maintainer:         oleg.marakhovsky@gmail.com
 
